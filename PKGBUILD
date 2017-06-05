@@ -13,7 +13,7 @@
 
 pkgname=docker-git
 _pkgname=docker
-pkgver=17.06.0.dev.32275.c68612de0c
+pkgver=17.06.0.dev.32627.c8141a1fb1
 pkgrel=1
 epoch=1
 pkgdesc='Pack, ship and run any application as a lightweight container.'
@@ -31,7 +31,7 @@ options=('!strip')
 source=('moby::git+https://github.com/moby/moby.git'
         'cli::git+https://github.com/docker/cli.git'
         'containerd::git+https://github.com/containerd/containerd.git'
-        'runc::git+https://github.com/docker/runc.git'
+        'runc::git+https://github.com/opencontainers/runc.git'
         'libnetwork::git+https://github.com/docker/libnetwork.git'
         'docker.install')
 md5sums=('SKIP'
@@ -52,6 +52,7 @@ prepare() {
   mkdir -p "$srcdir/go/src/github.com/docker"
   mkdir -p "$srcdir/go/src/github.com/moby"
   mkdir -p "$srcdir/go/src/github.com/containerd"
+  mkdir -p "$srcdir/go/src/github.com/opencontainers"
   export GOPATH="$srcdir/go"
 
   # update specific commits used
@@ -59,8 +60,7 @@ prepare() {
   . "$srcdir/moby/hack/dockerfile/binaries-commits"
 
   pushd "$srcdir/runc"
-    echo 'yeah'
-    git checkout -q master
+    git checkout -q "$RUNC_COMMIT"
   popd
 
   pushd "$srcdir/containerd"
@@ -92,8 +92,8 @@ prepare() {
 build() {
   # runc
   msg 'building runc'
-  ln -svf "$srcdir/runc" "$GOPATH/src/github.com/docker/"
-  pushd "$GOPATH/src/github.com/docker/runc"
+  ln -svf "$srcdir/runc" "$GOPATH/src/github.com/opencontainers/"
+  pushd "$GOPATH/src/github.com/opencontainers/runc"
     make BUILDTAGS=""
     man/md2man-all.sh 2>/dev/null
   popd
@@ -116,7 +116,7 @@ build() {
   msg 'building docker cli'
   ln -svf "$srcdir/cli" "$GOPATH/src/github.com/docker/"
   pushd cli
-    make build
+    LDFLAGS= make dynbinary
   popd
 
   # dockerd
@@ -138,7 +138,7 @@ build() {
 
 package() {
   # runc binary and man pages
-  pushd "$GOPATH/src/github.com/docker/runc"
+  pushd "$GOPATH/src/github.com/opencontainers/runc"
     install -Dm755 runc "$pkgdir/usr/bin/runc"
     install -dm755 "$pkgdir/usr/share/man"
     mv man/man*/ "$pkgdir/usr/share/man"
